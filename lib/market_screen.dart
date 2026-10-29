@@ -284,12 +284,12 @@ class _MarketScreenState extends State<MarketScreen> {
         "quando estremo (≥0.03%): posizionamento sbilanciato, "
         "rischio squeeze."),
     ('turn', "Turnover 24h in dollari: quanta attività c'è. "
-        "Sotto ~1M$ slippage alto, sopra ~50M$ liquido."),
+        "Sotto ~1M\$ slippage alto, sopra ~50M\$ liquido."),
     ('OI', "Open interest: dollari nelle posizioni aperte ora. "
         "OI che sale + prezzo che sale = trend forte; OI che "
         "scende = posizioni che chiudono (squeeze/liquidazioni)."),
     ('mcap', "Market cap totale della coin (prezzo × supply, "
-        "da CoinPaprika/CoinGecko). Le piccole (<10M$) sono "
+        "da CoinPaprika/CoinGecko). Le piccole (<10M\$) sono "
         "le più volatili e manipolabili."),
     ('lev', "Leva massima consentita su KuCoin. Bassa = l'exchange "
         "considera il contratto rischioso."),
