@@ -32,6 +32,7 @@ class MarketState extends ChangeNotifier {
   Set<String> favs = {};
   bool loading = true;
   String? error;
+  DateTime? updated;
   DateTime? catUpdated;
   bool catLoading = false;
 
@@ -68,6 +69,7 @@ class MarketState extends ChangeNotifier {
     try {
       rows = await MarketApi.fetchContracts();
       error = null;
+      updated = DateTime.now();
       for (final c in rows) {
         c.fav = favs.contains(c.sym);
         c.cat = _catOf(c.base);

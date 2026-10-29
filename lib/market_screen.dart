@@ -18,6 +18,7 @@ class _MarketScreenState extends State<MarketScreen> {
   String _minOiK = '0';
   String _cat = 'tutte';
   bool _onlyFav = false;
+  bool _liqOnly = true;
   String _sort = 'turn';
   bool _sortAsc = false;
 
@@ -53,7 +54,7 @@ class _MarketScreenState extends State<MarketScreen> {
           !c.sym.contains(q.replaceAll('BTC', 'XBT'))) {
         return false;
       }
-      if (c.turn < double.parse(_minTurnK)) return false;
+      if (_liqOnly && c.turn < double.parse(_minTurnK)) return false;
       if (c.chg.abs() < double.parse(_minChgK)) return false;
       if (c.lev < _minLev) return false;
       if (c.oiUsd < double.parse(_minOiK)) return false;
@@ -99,7 +100,22 @@ class _MarketScreenState extends State<MarketScreen> {
     final rows = _filtered;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KuCoin futures'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('KuCoin futures',
+                style: TextStyle(fontSize: 18)),
+            Text(
+                st.updated == null
+                    ? ''
+                    : 'agg. ${st.updated!.hour.toString().padLeft(2, '0')}:'
+                        '${st.updated!.minute.toString().padLeft(2, '0')}:'
+                        '${st.updated!.second.toString().padLeft(2, '0')}',
+                style: const TextStyle(
+                    fontSize: 11, color: Colors.grey)),
+          ],
+        ),
         actions: [
           if (st.catLoading)
             const Padding(
@@ -173,7 +189,7 @@ class _MarketScreenState extends State<MarketScreen> {
     ('chg', '24h%', 60.0, true),
     ('c7d', '7d%', 56.0, true),
     ('fund', 'fund', 62.0, true),
-    ('turn', 'turn', 64.0, true),
+    ('turn', 'vol', 64.0, true),
     ('oi', 'OI', 62.0, true),
     ('mcap', 'mcap', 68.0, true),
     ('lev', 'lev', 42.0, true),
@@ -224,7 +240,16 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          _dd('turn', {
+          Row(children: [
+            const Text('liq',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Switch(
+                value: _liqOnly,
+                materialTapTargetSize:
+                    MaterialTapTargetSize.shrinkWrap,
+                onChanged: (v) => setState(() => _liqOnly = v)),
+          ]),
+          _dd('vol', {
             '0': '≥0', '1e6': '≥1M', '5e6': '≥5M',
             '2e7': '≥20M', '1e8': '≥100M'
           }, _minTurnK, (v) => _minTurnK = v),
@@ -360,7 +385,7 @@ class _MarketScreenState extends State<MarketScreen> {
         "l'altra. Positivo = i LONG pagano gli SHORT. In rosa "
         "quando estremo (≥0.03%): posizionamento sbilanciato, "
         "rischio squeeze."),
-    ('turn', "Turnover 24h in dollari: quanta attività c'è. "
+    ('vol', "Volume (turnover) 24h in dollari: quanta attività c'è. "
         "Sotto ~1M\$ slippage alto, sopra ~50M\$ liquido."),
     ('OI', "Open interest: dollari nelle posizioni aperte ora. "
         "OI che sale + prezzo che sale = trend forte; OI che "
