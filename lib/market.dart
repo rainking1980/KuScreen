@@ -74,11 +74,12 @@ class MarketApi {
       }
       if (d.isEmpty) break;
       for (final row in d) {
-        out[(row[0] as num).toInt()] =
-            row.map((e) => e as num).toList();
+        final r = List<num>.from(row as List);
+        out[r[0].toInt()] = r;
       }
       if (d.length < 2) break;
-      to = d.map((r) => (r[0] as num).toInt()).reduce((a, b) => a < b ? a : b) - 1;
+      to = d.map((r) => ((r as List)[0] as num).toInt())
+          .reduce((a, b) => a < b ? a : b) - 1;
     }
     final keys = out.keys.toList()..sort();
     final all = keys.map((k) => out[k]!).toList();

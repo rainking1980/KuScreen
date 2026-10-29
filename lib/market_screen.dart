@@ -194,11 +194,15 @@ class _MarketScreenState extends State<MarketScreen> {
           value: val,
           isDense: true,
           dropdownColor: const Color(0xFF2A2A2A),
+          iconEnabledColor: Colors.white,
+          underline: const SizedBox(),
           style: const TextStyle(fontSize: 12, color: Colors.white),
           items: [
             for (final e in opts.entries)
               DropdownMenuItem(
-                  value: e.key, child: Text('$lbl ${e.value}'))
+                  value: e.key,
+                  child: Text('$lbl ${e.value}',
+                      style: const TextStyle(color: Colors.white)))
           ],
           onChanged: (v) => setState(() => set(v!)),
         ),
@@ -208,6 +212,11 @@ class _MarketScreenState extends State<MarketScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(children: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Text('ordina:',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
+          ),
           for (final e in const {
             'sym': 'sym', 'cat': 'cat', 'px': 'prezzo',
             'chg': '24h%', 'c7d': '7d%', 'fund': 'fund',
