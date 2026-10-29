@@ -47,6 +47,7 @@ class MarketState extends ChangeNotifier {
     await _loadCatCache(p);
     if (_catMap.isEmpty) await _loadCatAsset();
     _load7dCache(p);
+    if (_chg7d.isEmpty) await _load7dAsset();
     await refresh();
     _refreshCategoriesIfStale(p);
   }
@@ -108,6 +109,17 @@ class MarketState extends ChangeNotifier {
           e.key: (e.value as num).toDouble()
       };
     }
+  }
+
+  /// Snapshot 7d incluso nell'APK: primo avvio con colonna gia' piena.
+  Future<void> _load7dAsset() async {
+    try {
+      final raw = await rootBundle.loadString('assets/chg7d.json');
+      _chg7d = {
+        for (final e in (jsonDecode(raw) as Map).entries)
+          e.key: (e.value as num).toDouble()
+      };
+    } catch (_) {}
   }
 
   Future<void> _refresh7d() async {

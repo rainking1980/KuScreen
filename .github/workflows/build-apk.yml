@@ -17,6 +17,9 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Snapshot 7d fresco (KuCoin)
+        run: python3 tools/refresh_chg7d.py || echo 'snapshot 7d: uso quello committato'
+
       - name: Genera scaffold Android
         run: flutter create --platforms=android --org it.vinsc --project-name kucoin_screener .
 
