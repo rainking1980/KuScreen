@@ -10,12 +10,12 @@ class MarketScreen extends StatefulWidget {
 
 class _MarketScreenState extends State<MarketScreen> {
   final _q = TextEditingController();
-  double _minTurn = 1e6;
-  double _minChg = 0;
-  double _mcapLim = 0;          // 0 = tutte
+  String _minTurnK = '1e6';
+  String _minChgK = '0';
+  String _mcapK = '0';          // '0' = tutte
   int _minLev = 0;
   String _fund = 'tutti';
-  double _minOi = 0;
+  String _minOiK = '0';
   String _cat = 'tutte';
   bool _onlyFav = false;
   String _sort = 'turn';
@@ -53,11 +53,12 @@ class _MarketScreenState extends State<MarketScreen> {
           !c.sym.contains(q.replaceAll('BTC', 'XBT'))) {
         return false;
       }
-      if (c.turn < _minTurn) return false;
-      if (c.chg.abs() < _minChg) return false;
+      if (c.turn < double.parse(_minTurnK)) return false;
+      if (c.chg.abs() < double.parse(_minChgK)) return false;
       if (c.lev < _minLev) return false;
-      if (c.oiUsd < _minOi) return false;
-      if (_mcapLim > 0 && (c.mcap ?? 1e18) >= _mcapLim) return false;
+      if (c.oiUsd < double.parse(_minOiK)) return false;
+      final ml = double.parse(_mcapK);
+      if (ml > 0 && (c.mcap ?? 1e18) >= ml) return false;
       if (_cat != 'tutte' && c.cat != _cat) return false;
       if (_fund == '>0' && c.fund <= 0) return false;
       if (_fund == '<0' && c.fund >= 0) return false;
@@ -116,6 +117,7 @@ class _MarketScreenState extends State<MarketScreen> {
       ),
       body: Column(children: [
         _filters(),
+        _catAverages(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(children: [
@@ -212,15 +214,15 @@ class _MarketScreenState extends State<MarketScreen> {
           _dd('turn', {
             '0': '≥0', '1e6': '≥1M', '5e6': '≥5M',
             '2e7': '≥20M', '1e8': '≥100M'
-          }, '$_minTurn', (v) => _minTurn = double.parse(v)),
+          }, _minTurnK, (v) => _minTurnK = v),
           _dd('|24h|', {
             '0': '≥0%', '3': '≥3%', '5': '≥5%',
             '10': '≥10%', '20': '≥20%'
-          }, '$_minChg', (v) => _minChg = double.parse(v)),
+          }, _minChgK, (v) => _minChgK = v),
           _dd('mcap', {
             '0': 'tutte', '1e6': '<1M', '5e6': '<5M',
             '1e7': '<10M', '1e8': '<100M'
-          }, '$_mcapLim', (v) => _mcapLim = double.parse(v)),
+          }, _mcapK, (v) => _mcapK = v),
           _dd('lev', {
             '0': '≥0', '10': '≥10', '25': '≥25',
             '50': '≥50', '100': '≥100'
@@ -231,7 +233,7 @@ class _MarketScreenState extends State<MarketScreen> {
           }, _fund, (v) => _fund = v),
           _dd('OI', {
             '0': '≥0', '1e6': '≥1M', '1e7': '≥10M', '5e7': '≥50M'
-          }, '$_minOi', (v) => _minOi = double.parse(v)),
+          }, _minOiK, (v) => _minOiK = v),
           _dd('cat', {for (final c in cats) c: c}, _cat,
               (v) => _cat = v),
           const SizedBox(width: 4),
@@ -242,6 +244,68 @@ class _MarketScreenState extends State<MarketScreen> {
           ),
         ]),
       );
+
+  Widget _catAverages() {
+    // medie 24h%/7d% per categoria su TUTTI i mercati (breadth
+    // settoriale: dove sta ruotando il denaro)
+    final agg = <String, List<double>>{};
+    for (final c in MarketState.I.rows) {
+      final a = agg.putIfAbsent(c.cat, () => [0, 0, 0, 0]);
+      a[0]++;
+      a[1] += c.chg;
+      if (c.chg7d != null) {
+        a[2]++;
+        a[3] += c.chg7d!;
+      }
+    }
+    final keys = agg.keys.toList()
+      ..sort((a, b) => agg[b]![1].compareTo(agg[a]![1]));
+    Color cc(double v) => v >= 0
+        ? const Color(0xFF4CAF50)
+        : const Color(0xFFF44336);
+    return ExpansionTile(
+      dense: true,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+      title: const Text('medie per categoria',
+          style: TextStyle(fontSize: 12, color: Colors.grey)),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final k in keys)
+                Builder(builder: (_) {
+                  final a = agg[k]!;
+                  final m24 = a[1] / a[0];
+                  final m7 = a[2] > 0 ? a[3] / a[2] : null;
+                  return Text.rich(TextSpan(children: [
+                    TextSpan(
+                        text: '$k ${a[0].toInt()} ',
+                        style: const TextStyle(
+                            fontSize: 11, color: Colors.white)),
+                    TextSpan(
+                        text:
+                            '${m24 >= 0 ? '+' : ''}${m24.toStringAsFixed(1)}%',
+                        style: TextStyle(fontSize: 11, color: cc(m24))),
+                    TextSpan(
+                        text: m7 == null
+                            ? ''
+                            : ' / ${m7 >= 0 ? '+' : ''}${m7.toStringAsFixed(1)}%7d',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: m7 == null
+                                ? Colors.grey
+                                : cc(m7))),
+                  ]));
+                }),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _dd(String lbl, Map<String, String> opts, String val,
           void Function(String) set) =>

@@ -62,9 +62,15 @@ class _ChartScreenState extends State<ChartScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      final s = '$e';
       setState(() {
         loading = false;
-        err = 'errore: $e';
+        err = s.contains('Socket') ||
+                s.contains('host') ||
+                s.contains('Connection') ||
+                s.contains('Timeout')
+            ? 'rete offline / KuCoin irraggiungibile'
+            : 'errore: $e';
       });
     }
   }

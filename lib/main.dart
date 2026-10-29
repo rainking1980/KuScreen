@@ -75,7 +75,13 @@ class MarketState extends ChangeNotifier {
       unawaited(_refresh7d());
       unawaited(_refreshMcap());
     } catch (e) {
-      error = '$e';
+      final s = '$e';
+      error = s.contains('Socket') ||
+              s.contains('host') ||
+              s.contains('Connection') ||
+              s.contains('Timeout')
+          ? 'rete offline / KuCoin irraggiungibile'
+          : s;
     }
     loading = false;
     notifyListeners();
