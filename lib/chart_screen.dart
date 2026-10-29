@@ -19,6 +19,7 @@ class _ChartScreenState extends State<ChartScreen> {
   int gran = 60;
   List<Candle> candles = [];
   bool loading = true;
+  String? err;
   Timer? _timer;
 
   @override
@@ -40,22 +41,32 @@ class _ChartScreenState extends State<ChartScreen> {
   }
 
   Future<void> _load({bool quiet = false}) async {
-    if (!quiet) setState(() => loading = true);
-    final ks = await MarketApi.fetchKlines(sym, gran);
-    if (!mounted) return;
-    setState(() {
-      candles = [
-        for (final k in ks)
-          Candle(
-            date: DateTime.fromMillisecondsSinceEpoch(k[0].toInt(),
-                isUtc: true),
-            open: k[1].toDouble(), high: k[2].toDouble(),
-            low: k[3].toDouble(), close: k[4].toDouble(),
-            volume: k[5].toDouble(),
-          )
-      ];
-      loading = false;
-    });
+    if (!quiet) setState(() { loading = true; err = null; });
+    try {
+      final ks = await MarketApi.fetchKlines(sym, gran)
+          .timeout(const Duration(seconds: 60));
+      if (!mounted) return;
+      setState(() {
+        candles = [
+          for (final k in ks)
+            Candle(
+              date: DateTime.fromMillisecondsSinceEpoch(k[0].toInt(),
+                  isUtc: true),
+              open: k[1].toDouble(), high: k[2].toDouble(),
+              low: k[3].toDouble(), close: k[4].toDouble(),
+              volume: k[5].toDouble(),
+            )
+        ];
+        loading = false;
+        if (ks.isEmpty) err = 'nessun dato da KuCoin';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        loading = false;
+        err = 'errore: $e';
+      });
+    }
   }
 
   @override
@@ -89,8 +100,18 @@ class _ChartScreenState extends State<ChartScreen> {
         Expanded(
           child: loading
               ? const Center(child: CircularProgressIndicator())
-              : candles.isEmpty
-                  ? const Center(child: Text('nessun dato'))
+              : err != null
+                  ? Center(
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(err!,
+                                style: const TextStyle(
+                                    color: Colors.redAccent)),
+                            TextButton(
+                                onPressed: _load,
+                                child: const Text('riprova')),
+                          ]))
                   : Candlesticks(candles: candles),
         ),
       ]),

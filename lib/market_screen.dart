@@ -170,7 +170,7 @@ class _MarketScreenState extends State<MarketScreen> {
           }, '$_minLev', (v) => _minLev = int.parse(v)),
           _dd('fund', {
             'tutti': 'tutti', '>0': '>0', '<0': '<0',
-            'estremo': 'estremo'
+            'estremo': 'extr'
           }, _fund, (v) => _fund = v),
           _dd('OI', {
             '0': '≥0', '1e6': '≥1M', '1e7': '≥10M', '5e7': '≥50M'
@@ -193,7 +193,8 @@ class _MarketScreenState extends State<MarketScreen> {
         child: DropdownButton<String>(
           value: val,
           isDense: true,
-          style: const TextStyle(fontSize: 12),
+          dropdownColor: const Color(0xFF2A2A2A),
+          style: const TextStyle(fontSize: 12, color: Colors.white),
           items: [
             for (final e in opts.entries)
               DropdownMenuItem(
@@ -238,78 +239,75 @@ class _MarketScreenState extends State<MarketScreen> {
   Widget _row(Contract c) {
     Color chgC(double v) =>
         v >= 0 ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+    const g = TextStyle(fontSize: 10, color: Colors.grey);
     return InkWell(
       onTap: () => Navigator.pushNamed(context, '/chart',
           arguments: c.sym),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Row(children: [
-          GestureDetector(
-            onTap: () => MarketState.I.toggleFav(c.sym),
-            child: Icon(c.fav ? Icons.star : Icons.star_border,
-                size: 18,
-                color: c.fav ? Colors.amber : Colors.grey),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: 105,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(c.pretty,
-                      style: const TextStyle(fontSize: 13)),
-                  Text(c.cat,
-                      style: const TextStyle(
-                          fontSize: 10, color: Colors.grey)),
-                ]),
-          ),
-          Expanded(
-            flex: 3,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(_px(c.px),
-                      style: const TextStyle(fontSize: 13)),
-                  Text('OI ${_usd(c.oiUsd)}  mc ${_usd(c.mcap)}',
-                      style: const TextStyle(
-                          fontSize: 10, color: Colors.grey)),
-                ]),
-          ),
-          Expanded(
-            flex: 2,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('${c.chg >= 0 ? '+' : ''}${c.chg.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: chgC(c.chg),
-                          fontWeight: FontWeight.bold)),
-                  Text(
-                      c.chg7d == null
-                          ? '7d —'
-                          : '7d ${c.chg7d! >= 0 ? '+' : ''}${c.chg7d!.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: c.chg7d == null
-                              ? Colors.grey
-                              : chgC(c.chg7d!))),
-                ]),
-          ),
-          const SizedBox(width: 6),
-          Column(crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-            Text(_usd(c.turn),
-                style: const TextStyle(
-                    fontSize: 11, color: Colors.grey)),
-            Text(
-                '${c.fund >= 0 ? '+' : ''}${c.fund.toStringAsFixed(3)}%',
-                style: TextStyle(
-                    fontSize: 10,
-                    color: c.fund.abs() >= 0.03
-                        ? Colors.pinkAccent
-                        : Colors.grey)),
+        child: Column(children: [
+          // ---- riga 1: star, sym, prezzo, 24h%, 7d% ----
+          Row(children: [
+            GestureDetector(
+              onTap: () => MarketState.I.toggleFav(c.sym),
+              child: Icon(c.fav ? Icons.star : Icons.star_border,
+                  size: 16,
+                  color: c.fav ? Colors.amber : Colors.grey),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(c.pretty,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500)),
+            ),
+            Text(_px(c.px), style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 62,
+              child: Text(
+                  '${c.chg >= 0 ? '+' : ''}${c.chg.toStringAsFixed(2)}%',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: chgC(c.chg),
+                      fontWeight: FontWeight.bold)),
+            ),
+            SizedBox(
+              width: 62,
+              child: Text(
+                  c.chg7d == null
+                      ? '—'
+                      : '${c.chg7d! >= 0 ? '+' : ''}${c.chg7d!.toStringAsFixed(1)}%',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: c.chg7d == null
+                          ? Colors.grey
+                          : chgC(c.chg7d!))),
+            ),
           ]),
+          // ---- riga 2: metadati piccoli ----
+          Padding(
+            padding: const EdgeInsets.only(left: 22, top: 1),
+            child: Row(children: [
+              Expanded(
+                child: Text(
+                  '${c.cat} · turn ${_usd(c.turn)} · OI ${_usd(c.oiUsd)}'
+                  ' · mc ${_usd(c.mcap)} · lev ${c.lev}x',
+                  overflow: TextOverflow.ellipsis,
+                  style: g,
+                ),
+              ),
+              Text(
+                  '${c.fund >= 0 ? '+' : ''}${c.fund.toStringAsFixed(3)}%',
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: c.fund.abs() >= 0.03
+                          ? Colors.pinkAccent
+                          : Colors.grey)),
+            ]),
+          ),
         ]),
       ),
     );

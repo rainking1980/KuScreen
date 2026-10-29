@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'market.dart';
 import 'market_screen.dart';
@@ -43,8 +44,23 @@ class MarketState extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     favs = (p.getStringList('favs') ?? []).toSet();
     await _loadCatCache(p);
+    if (_catMap.isEmpty) await _loadCatAsset();
     await refresh();
     _refreshCategoriesIfStale(p);
+  }
+
+  /// Snapshot categorie/mcap incluso nell'APK: primo avvio istantaneo.
+  Future<void> _loadCatAsset() async {
+    try {
+      final raw = await rootBundle.loadString('assets/catmap.json');
+      final d = jsonDecode(raw) as Map;
+      _catMap = {
+        for (final e in (d['m'] as Map).entries)
+          e.key: {'cat': e.value[0], 'mcap': e.value[1]}
+      };
+      catUpdated =
+          DateTime.fromMillisecondsSinceEpoch((d['t'] * 1000).toInt());
+    } catch (_) {}
   }
 
   Future<void> refresh() async {
@@ -64,14 +80,15 @@ class MarketState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- 7d% (una tantum al boot, le 8 richeste/batch tengono bassa la
-  // pressione sull'API — sul telefono il fetch completo resta leggero)
+  // ---- 7d%: posticipato e gentile per non saturare la rete del
+  // telefono mentre l'utente naviga (il fetch completo e' 700+ req)
   bool _fetch7dDone = false;
   Future<void> _refresh7d() async {
     if (_fetch7dDone) return;
     _fetch7dDone = true;
+    await Future.delayed(const Duration(seconds: 20));
     final m = await MarketApi.fetch7d(
-        rows.map((c) => c.sym).toList());
+        rows.map((c) => c.sym).toList(), workers: 3);
     for (final c in rows) {
       c.chg7d = m[c.sym];
     }

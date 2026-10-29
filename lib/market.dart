@@ -106,7 +106,7 @@ class MarketApi {
             if (o != 0) res[s] = (c / o - 1) * 100;
           }
         } catch (_) {}
-        await Future.delayed(const Duration(milliseconds: 60));
+        await Future.delayed(const Duration(milliseconds: 150));
       }
     }
     await Future.wait(List.generate(workers, (_) => worker()));
