@@ -116,34 +116,48 @@ class _MarketScreenState extends State<MarketScreen> {
         ],
       ),
       body: Column(children: [
-        _filters(),
         _catAverages(),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          child: Row(children: [
-            Text('${rows.length} mercati',
-                style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            const Spacer(),
-            Text(st.error ?? '',
-                style: const TextStyle(color: Colors.red, fontSize: 11)),
-          ]),
-        ),
         Expanded(
           child: st.loading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: _tableW,
-                    child: Column(children: [
-                      _header(),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: rows.length,
-                          itemBuilder: (_, i) => _row(rows[i]),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _filters(),
+                      SizedBox(
+                        width: _tableW,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          child: Row(children: [
+                            Text('${rows.length} mercati',
+                                style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12)),
+                            const Spacer(),
+                            Text(st.error ?? '',
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11)),
+                          ]),
                         ),
                       ),
-                    ]),
+                      SizedBox(
+                        width: _tableW,
+                        child: _header(),
+                      ),
+                      Expanded(
+                        child: SizedBox(
+                          width: _tableW,
+                          child: ListView.builder(
+                            itemCount: rows.length,
+                            itemBuilder: (_, i) => _row(rows[i]),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
         ),
@@ -194,8 +208,7 @@ class _MarketScreenState extends State<MarketScreen> {
         ]),
       );
 
-  Widget _filters() => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+  Widget _filters() => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(children: [
           SizedBox(
