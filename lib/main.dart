@@ -150,7 +150,8 @@ class MarketState extends ChangeNotifier {
     final m = await MarketApi.fetchMcaps();
     if (m.isEmpty) return;
     for (final c in rows) {
-      c.mcap = m[c.base.toUpperCase()] ?? c.mcap;
+      final k = _keyFor(m, c.base);
+      if (k != null) c.mcap = m[k];
     }
     notifyListeners();
   }
@@ -191,10 +192,25 @@ class MarketState extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _catOf(String base) =>
-      (_catMap[base.toUpperCase()]?['cat'] as String?) ?? 'altro';
-  double? _mcapOf(String base) =>
-      (_catMap[base.toUpperCase()]?['mcap'] as num?)?.toDouble();
+  /// Lookup tollerante: prima il symbol esatto, poi senza prefisso
+  /// moltiplicatore (1000BONK -> BONK, 10000SATS -> SATS).
+  String? _keyFor(Map m, String base) {
+    final b = base.toUpperCase();
+    if (m.containsKey(b)) return b;
+    final s = b.replaceFirst(RegExp(r'^\d+'), '');
+    if (s != b && m.containsKey(s)) return s;
+    return null;
+  }
+
+  String _catOf(String base) {
+    final k = _keyFor(_catMap, base);
+    return (k == null ? null : _catMap[k]?['cat'] as String?) ?? 'altro';
+  }
+
+  double? _mcapOf(String base) {
+    final k = _keyFor(_catMap, base);
+    return (k == null ? null : _catMap[k]?['mcap'] as num?)?.toDouble();
+  }
 
   Future<void> toggleFav(String sym) async {
     if (favs.contains(sym)) {
