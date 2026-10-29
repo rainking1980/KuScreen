@@ -45,6 +45,7 @@ class MarketState extends ChangeNotifier {
     favs = (p.getStringList('favs') ?? []).toSet();
     await _loadCatCache(p);
     if (_catMap.isEmpty) await _loadCatAsset();
+    _load7dCache(p);
     await refresh();
     _refreshCategoriesIfStale(p);
   }
@@ -71,6 +72,7 @@ class MarketState extends ChangeNotifier {
         c.fav = favs.contains(c.sym);
         c.cat = _catOf(c.base);
         c.mcap = _mcapOf(c.base);
+        c.chg7d = _chg7d[c.sym];
       }
       unawaited(_refresh7d());
       unawaited(_refreshMcap());
@@ -88,18 +90,42 @@ class MarketState extends ChangeNotifier {
   }
 
   // ---- 7d%: posticipato e gentile per non saturare la rete del
-  // telefono mentre l'utente naviga (il fetch completo e' 700+ req)
+  // telefono mentre l'utente naviga (il fetch completo e' 700+ req).
+  // Cache persistente 12h: refresh() ricrea i Contract da zero e
+  // riapplica da qui, altrimenti la colonna si svuoterebbe a ogni
+  // refresh dei 30s.
+  Map<String, double> _chg7d = {};
   bool _fetch7dDone = false;
+  void _load7dCache(SharedPreferences p) {
+    final raw = p.getString('chg7d');
+    final t = p.getInt('chg7dT') ?? 0;
+    if (raw != null &&
+        DateTime.now().millisecondsSinceEpoch - t < 12 * 3600000) {
+      _chg7d = {
+        for (final e in (jsonDecode(raw) as Map).entries)
+          e.key: (e.value as num).toDouble()
+      };
+    }
+  }
+
   Future<void> _refresh7d() async {
     if (_fetch7dDone) return;
     _fetch7dDone = true;
     await Future.delayed(const Duration(seconds: 20));
     final m = await MarketApi.fetch7d(
         rows.map((c) => c.sym).toList(), workers: 3);
+    if (m.isEmpty) {
+      _fetch7dDone = false; // rete giu': riprova al prossimo refresh
+      return;
+    }
+    _chg7d = m;
     for (final c in rows) {
       c.chg7d = m[c.sym];
     }
     notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setString('chg7d', jsonEncode(m));
+    await p.setInt('chg7dT', DateTime.now().millisecondsSinceEpoch);
   }
 
   // ---- mcap da CoinPaprika: 1 req leggera, sempre fresca -------------

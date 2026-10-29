@@ -122,8 +122,9 @@ class MarketApi {
         final s = queue.removeAt(0);
         try {
           final frm = DateTime.now().millisecondsSinceEpoch - 8 * 86400000;
+          final to = DateTime.now().millisecondsSinceEpoch;
           final u = Uri.parse('$_ku/api/v1/kline/query'
-              '?symbol=$s&granularity=1440&from=$frm');
+              '?symbol=$s&granularity=1440&from=$frm&to=$to');
           final r = await http.get(u).timeout(const Duration(seconds: 20));
           var k = jsonDecode(r.body)['data'] as List? ?? [];
           k.sort((a, b) => (a[0] as num).compareTo(b[0] as num));
