@@ -1,0 +1,35 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Genera scaffold Android
+        run: flutter create --platforms=android --org it.vinsc --project-name kucoin_screener .
+
+      - name: Aggiungi permesso INTERNET (release)
+        run: |
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>' \
+            android/app/src/main/AndroidManifest.xml
+
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos || true
+      - run: flutter build apk --release --split-per-abi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kucoin-screener-apk
+          path: build/app/outputs/flutter-apk/*.apk
