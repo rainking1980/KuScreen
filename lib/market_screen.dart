@@ -106,13 +106,16 @@ class _MarketScreenState extends State<MarketScreen> {
               child: SizedBox(width: 16, height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))),
           IconButton(
+              icon: const Icon(Icons.info_outline,
+                  color: Colors.lightBlueAccent),
+              onPressed: _showLegend),
+          IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => st.refresh()),
         ],
       ),
       body: Column(children: [
         _filters(),
-        _sortBar(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(children: [
@@ -126,14 +129,68 @@ class _MarketScreenState extends State<MarketScreen> {
         Expanded(
           child: st.loading
               ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: rows.length,
-                  itemBuilder: (_, i) => _row(rows[i]),
+              : SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: _tableW,
+                    child: Column(children: [
+                      _header(),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: rows.length,
+                          itemBuilder: (_, i) => _row(rows[i]),
+                        ),
+                      ),
+                    ]),
+                  ),
                 ),
         ),
       ]),
     );
   }
+
+  // (sortKey, label, width, allineaDx)
+  static const _cols = [
+    ('sym', 'sym', 100.0, false),
+    ('cat', 'cat', 58.0, false),
+    ('px', 'prezzo', 70.0, true),
+    ('chg', '24h%', 60.0, true),
+    ('c7d', '7d%', 56.0, true),
+    ('fund', 'fund', 62.0, true),
+    ('turn', 'turn', 64.0, true),
+    ('oi', 'OI', 62.0, true),
+    ('mcap', 'mcap', 68.0, true),
+    ('lev', 'lev', 42.0, true),
+  ];
+  static const _starW = 30.0;
+  static const _tableW = _starW + 704.0;
+
+  Widget _header() => Container(
+        height: 26,
+        color: const Color(0xFF1E1E1E),
+        child: Row(children: [
+          const SizedBox(width: _starW),
+          for (final (k, lbl, w, _) in _cols)
+            GestureDetector(
+              onTap: () => _tapSort(k),
+              child: SizedBox(
+                width: w,
+                child: Text(
+                  '$lbl${_sort == k ? (_sortAsc ? ' ▲' : ' ▼') : ''}',
+                  textAlign: k == 'sym' || k == 'cat'
+                      ? TextAlign.left
+                      : TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: _sort == k
+                          ? Colors.lightBlueAccent
+                          : Colors.grey),
+                ),
+              ),
+            ),
+        ]),
+      );
 
   Widget _filters() => SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -208,115 +265,139 @@ class _MarketScreenState extends State<MarketScreen> {
         ),
       );
 
-  Widget _sortBar() => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(children: [
-          const Padding(
-            padding: EdgeInsets.only(right: 4),
-            child: Text('ordina:',
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
-          ),
-          for (final e in const {
-            'sym': 'sym', 'cat': 'cat', 'px': 'prezzo',
-            'chg': '24h%', 'c7d': '7d%', 'fund': 'fund',
-            'turn': 'turn', 'oi': 'OI', 'mcap': 'mcap',
-            'lev': 'lev'
-          }.entries)
-            Padding(
-              padding: const EdgeInsets.only(right: 2),
-              child: TextButton(
-                style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize:
-                        MaterialTapTargetSize.shrinkWrap),
-                onPressed: () => _tapSort(e.key),
-                child: Text(
-                  '${e.value}${_sort == e.key ? (_sortAsc ? '▲' : '▼') : ''}',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: _sort == e.key
-                          ? Colors.lightBlueAccent
-                          : Colors.grey),
-                ),
-              ),
+  static const _legend = <(String, String)>[
+    ('sym', "Il contratto futures perpetuo. XBT = bitcoin su KuCoin, "
+        "il suffisso USDTM = marginato in USDT. Tap sulla riga "
+        "per aprire il grafico a candele."),
+    ('cat', "Settore della coin (CoinGecko): L1/L2 blockchain, Meme, "
+        "AI, Gaming, DeFi, Privacy, RWA = real-world asset, "
+        "DePIN = reti fisiche, Exchange = token di exchange."),
+    ('prezzo', "Il mark price: il prezzo 'onesto' calcolato sugli "
+        "index di riferimento. Liquidazioni e PnL si calcolano "
+        "su questo, non sull'ultimo trade."),
+    ('24h%', "Variazione del prezzo nelle ultime 24 ore."),
+    ('7d%', "Variazione dell'ultima settimana (candele daily). "
+        "24h verde + 7d rosso = rimbalzo in trend debole; "
+        "entrambe verdi = momentum confermato."),
+    ('fund', "Funding rate %/8h: chi sta dalla parte affollata paga "
+        "l'altra. Positivo = i LONG pagano gli SHORT. In rosa "
+        "quando estremo (≥0.03%): posizionamento sbilanciato, "
+        "rischio squeeze."),
+    ('turn', "Turnover 24h in dollari: quanta attività c'è. "
+        "Sotto ~1M$ slippage alto, sopra ~50M$ liquido."),
+    ('OI', "Open interest: dollari nelle posizioni aperte ora. "
+        "OI che sale + prezzo che sale = trend forte; OI che "
+        "scende = posizioni che chiudono (squeeze/liquidazioni)."),
+    ('mcap', "Market cap totale della coin (prezzo × supply, "
+        "da CoinPaprika/CoinGecko). Le piccole (<10M$) sono "
+        "le più volatili e manipolabili."),
+    ('lev', "Leva massima consentita su KuCoin. Bassa = l'exchange "
+        "considera il contratto rischioso."),
+  ];
+
+  void _showLegend() => showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text('Legenda colonne',
+              style: TextStyle(fontSize: 16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final (t, d) in _legend)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: RichText(
+                      text: TextSpan(children: [
+                        TextSpan(
+                            text: '$t — ',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 12)),
+                        TextSpan(
+                            text: d,
+                            style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12)),
+                      ]),
+                    ),
+                  ),
+              ],
             ),
-        ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('chiudi')),
+          ],
+        ),
+      );
+
+  Widget _cell(String txt, double w,
+          {Color color = Colors.white,
+          bool right = true,
+          double fs = 11.5,
+          bool bold = false}) =>
+      SizedBox(
+        width: w,
+        child: Text(txt,
+            textAlign: right ? TextAlign.right : TextAlign.left,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: TextStyle(
+                fontSize: fs,
+                color: color,
+                fontWeight:
+                    bold ? FontWeight.bold : FontWeight.normal)),
       );
 
   Widget _row(Contract c) {
     Color chgC(double v) =>
         v >= 0 ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
-    const g = TextStyle(fontSize: 10, color: Colors.grey);
     return InkWell(
       onTap: () => Navigator.pushNamed(context, '/chart',
           arguments: c.sym),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Column(children: [
-          // ---- riga 1: star, sym, prezzo, 24h%, 7d% ----
-          Row(children: [
-            GestureDetector(
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(children: [
+          SizedBox(
+            width: _starW,
+            child: GestureDetector(
               onTap: () => MarketState.I.toggleFav(c.sym),
               child: Icon(c.fav ? Icons.star : Icons.star_border,
-                  size: 16,
+                  size: 15,
                   color: c.fav ? Colors.amber : Colors.grey),
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(c.pretty,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w500)),
-            ),
-            Text(_px(c.px), style: const TextStyle(fontSize: 12)),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 62,
-              child: Text(
-                  '${c.chg >= 0 ? '+' : ''}${c.chg.toStringAsFixed(2)}%',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: chgC(c.chg),
-                      fontWeight: FontWeight.bold)),
-            ),
-            SizedBox(
-              width: 62,
-              child: Text(
-                  c.chg7d == null
-                      ? '—'
-                      : '${c.chg7d! >= 0 ? '+' : ''}${c.chg7d!.toStringAsFixed(1)}%',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: c.chg7d == null
-                          ? Colors.grey
-                          : chgC(c.chg7d!))),
-            ),
-          ]),
-          // ---- riga 2: metadati piccoli ----
-          Padding(
-            padding: const EdgeInsets.only(left: 22, top: 1),
-            child: Row(children: [
-              Expanded(
-                child: Text(
-                  '${c.cat} · turn ${_usd(c.turn)} · OI ${_usd(c.oiUsd)}'
-                  ' · mc ${_usd(c.mcap)} · lev ${c.lev}x',
-                  overflow: TextOverflow.ellipsis,
-                  style: g,
-                ),
-              ),
-              Text(
-                  '${c.fund >= 0 ? '+' : ''}${c.fund.toStringAsFixed(3)}%',
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: c.fund.abs() >= 0.03
-                          ? Colors.pinkAccent
-                          : Colors.grey)),
-            ]),
           ),
+          _cell(c.pretty, 100,
+              right: false,
+              color: Colors.lightBlueAccent,
+              fs: 12,
+              bold: true),
+          _cell(c.cat, 58, right: false, color: Colors.grey, fs: 10),
+          _cell(_px(c.px), 70),
+          _cell('${c.chg >= 0 ? '+' : ''}${c.chg.toStringAsFixed(2)}',
+              60,
+              color: chgC(c.chg), bold: true),
+          _cell(
+              c.chg7d == null
+                  ? '—'
+                  : '${c.chg7d! >= 0 ? '+' : ''}${c.chg7d!.toStringAsFixed(1)}',
+              56,
+              color: c.chg7d == null ? Colors.grey : chgC(c.chg7d!)),
+          _cell('${c.fund >= 0 ? '+' : ''}${c.fund.toStringAsFixed(3)}',
+              62,
+              color: c.fund.abs() >= 0.03
+                  ? Colors.pinkAccent
+                  : Colors.grey),
+          _cell(_usd(c.turn), 64, color: Colors.grey),
+          _cell(_usd(c.oiUsd), 62, color: Colors.grey),
+          _cell(_usd(c.mcap), 68, color: Colors.grey),
+          _cell('${c.lev}', 42, color: Colors.grey),
         ]),
       ),
     );
