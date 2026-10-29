@@ -73,6 +73,7 @@ class MarketState extends ChangeNotifier {
         c.mcap = _mcapOf(c.base);
       }
       unawaited(_refresh7d());
+      unawaited(_refreshMcap());
     } catch (e) {
       error = '$e';
     }
@@ -91,6 +92,19 @@ class MarketState extends ChangeNotifier {
         rows.map((c) => c.sym).toList(), workers: 3);
     for (final c in rows) {
       c.chg7d = m[c.sym];
+    }
+    notifyListeners();
+  }
+
+  // ---- mcap da CoinPaprika: 1 req leggera, sempre fresca -------------
+  bool _mcapDone = false;
+  Future<void> _refreshMcap() async {
+    if (_mcapDone) return;
+    _mcapDone = true;
+    final m = await MarketApi.fetchMcaps();
+    if (m.isEmpty) return;
+    for (final c in rows) {
+      c.mcap = m[c.base.toUpperCase()] ?? c.mcap;
     }
     notifyListeners();
   }

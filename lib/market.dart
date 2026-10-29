@@ -85,6 +85,32 @@ class MarketApi {
     return all.length > want ? all.sublist(all.length - want) : all;
   }
 
+  /// Market cap da CoinPaprika: TUTTE le coin in 1 sola richiesta,
+  /// vince la coin piu' grossa per symbol (rank).
+  static Future<Map<String, double>> fetchMcaps() async {
+    final out = <String, double>{};
+    try {
+      final r = await http
+          .get(Uri.parse('https://api.coinpaprika.com/v1/tickers'))
+          .timeout(const Duration(seconds: 45));
+      final d = jsonDecode(r.body) as List;
+      final best = <String, int>{};
+      for (final c in d) {
+        final s = (c['symbol'] ?? '').toString().toUpperCase();
+        final rk = (c['rank'] ?? 999999) as int;
+        final mc = (c['quotes']?['USD']?['market_cap'] as num?)
+            ?.toDouble();
+        if (s.isEmpty || mc == null) continue;
+        if (!best.containsKey(s) || rk < best[s]!) {
+          best[s] = rk;
+          out[s] = mc;
+        }
+      }
+      if (out.containsKey('BTC')) out['XBT'] = out['BTC']!;
+    } catch (_) {}
+    return out;
+  }
+
   /// Variazione 7d per una lista di simboli (1 req ognuna).
   static Future<Map<String, double>> fetch7d(List<String> syms,
       {int workers = 8}) async {
